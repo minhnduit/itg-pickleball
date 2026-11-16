@@ -21,6 +21,7 @@ const vi = {
   searchPlaceholder: 'Tìm tên đội / vận động viên', myMatches: 'Trận của tôi', nothingFound: 'Không tìm thấy',
   lastResults: 'Kết quả gần nhất',
   // courts board / matches
+  tvView_courts: 'Sân đang đấu', tvView_standings: 'Bảng xếp hạng', tvView_brackets: 'Nhánh đấu', tvView_upnext: 'Trận tiếp theo', tvPaused: 'Tạm dừng',
   idle: 'Sân trống', noCurrent: 'Chưa có trận', next: 'Tiếp theo', callNext: 'Gọi trận tiếp', assignMatch: 'Xếp trận...',
   takeOver: 'Chấm điểm thay', override: 'Sửa điểm', reason: 'Lý do', save: 'Lưu',
   allStages: 'Tất cả giai đoạn', allGroups: 'Tất cả bảng', allStatuses: 'Mọi trạng thái', allCourts: 'Tất cả sân', noCourt: 'Chưa có sân',
@@ -85,6 +86,7 @@ const en: Record<Key, string> = {
   pub_live: 'Live', pub_schedule: 'Schedule', pub_groups: 'Groups', pub_brackets: 'Brackets',
   searchPlaceholder: 'Search team / player', myMatches: 'My matches', nothingFound: 'Nothing found',
   lastResults: 'Last results',
+  tvView_courts: 'Live courts', tvView_standings: 'Standings', tvView_brackets: 'Brackets', tvView_upnext: 'Up next', tvPaused: 'Paused',
   idle: 'Idle', noCurrent: 'No match', next: 'Next', callNext: 'Call next', assignMatch: 'Assign match...',
   takeOver: 'Take over scoring', override: 'Override score', reason: 'Reason', save: 'Save',
   allStages: 'All stages', allGroups: 'All groups', allStatuses: 'All statuses', allCourts: 'All courts', noCourt: 'No court',

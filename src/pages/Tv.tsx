@@ -14,22 +14,56 @@ type View = (typeof VIEWS)[number]
 
 function Tv({ tid }: { tid: string }) {
   const t = useT()
-  const [params] = useSearchParams()
+  const [params, setSearchParams] = useSearchParams()
   const { data } = useTournamentData(tid)
   const [now, setNow] = useState(new Date())
   const [idx, setIdx] = useState(0)
   const [scale, setScale] = useState(1)
+  const [paused, setPaused] = useState(false)
+  const [nav, setNav] = useState(0)
 
-  const pinned = params.get('view') as View | null
-  const view: View = pinned && VIEWS.includes(pinned) ? pinned : VIEWS[idx % VIEWS.length]
+  const raw = params.get('view')
+  const pinned = raw && (VIEWS as readonly string[]).includes(raw) ? (raw as View) : null
+  const cur = pinned ? VIEWS.indexOf(pinned) : idx % VIEWS.length
+  const view: View = VIEWS[cur]
+
+  const go = (i: number) => {
+    if (params.has('view')) {
+      setSearchParams(p => { const n = new URLSearchParams(p); n.delete('view'); return n }, { replace: true })
+      setPaused(false)
+    }
+    setNav(n => n + 1)
+    setIdx(((i % VIEWS.length) + VIEWS.length) % VIEWS.length)
+  }
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000)
-    const r = setInterval(() => setIdx(x => x + 1), 15000)
     const fit = () => setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080))
     fit(); window.addEventListener('resize', fit)
-    return () => { clearInterval(i); clearInterval(r); window.removeEventListener('resize', fit) }
+    return () => { clearInterval(i); window.removeEventListener('resize', fit) }
   }, [])
+
+  useEffect(() => {
+    if (paused || pinned) return
+    const r = setInterval(() => setIdx(x => x + 1), 15000)
+    return () => clearInterval(r)
+  }, [paused, pinned, idx, nav])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      let act: (() => void) | null = null
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') act = () => go(cur + 1)
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') act = () => go(cur - 1)
+      else if (e.key >= '1' && e.key <= '4') act = () => go(Number(e.key) - 1)
+      else if (e.key === ' ' || e.key === 'k') act = () => setPaused(p => !p)
+      if (!act) return
+      e.preventDefault()
+      if (!e.repeat) act()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const rr = data.stages.find(s => s.kind === 'round_robin')
   const upNext = data.matches.filter(m => m.status === 'scheduled' || m.status === 'called').slice(0, 10)
@@ -43,8 +77,14 @@ function Tv({ tid }: { tid: string }) {
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-gold" />
             <span className="display text-5xl text-white">{data.tournament?.name}</span>
           </div>
-          <div className="flex gap-3">
-            {VIEWS.map(v => <span key={v} className={`h-3 w-3 rounded-full ${v === view ? 'bg-gold' : 'bg-brand-800'}`} />)}
+          <div className="flex items-center gap-1">
+            {VIEWS.map((v, i) => (
+              <button key={v} type="button" aria-label={t(`tvView_${v}`)} onClick={() => go(i)}
+                className="cursor-pointer rounded-full p-2 focus-visible:ring-2 focus-visible:ring-gold">
+                <span className={`block h-3 w-3 rounded-full ${v === view ? 'bg-gold' : 'bg-brand-800'}`} />
+              </button>
+            ))}
+            {paused && !pinned && <span className="ml-4 font-score text-2xl uppercase text-gold">{t('tvPaused')}</span>}
           </div>
           <span className="font-score text-6xl font-bold tnum text-gold">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
         </div>

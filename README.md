@@ -19,6 +19,9 @@ Settings -> Pages -> Source = GitHub Actions. Push to `main` to deploy.
 ## Routing
 Clean URLs (`/<slug>`, `/<slug>/tv`, `/<slug>/admin`) use BrowserRouter. `npm run build` copies `dist/index.html` to `dist/404.html`: GitHub Pages serves 404.html for deep links, which acts as the SPA fallback. CI sets `VITE_BASE=/<repo>/`.
 
+## TV controls
+Auto-rotates every 15 s. Optional: ← → / PageUp PageDown switch view, 1–4 jump, Space (or k) pause/resume, click the dots. `?view=courts|standings|brackets|upnext` pins a view.
+
 ## Upgrading an existing Supabase project
 Run in the SQL editor to add the short-link column:
 ```sql
