@@ -63,6 +63,9 @@ const vi = {
   setupTournamentDesc: 'Tên và ngày diễn ra giải đấu.', setupCourtsDesc: 'Thêm, đổi tên và sắp xếp thứ tự các sân.',
   setupTeamsDesc: 'Thêm từng đội hoặc dán danh sách từ Excel.', setupStagesDesc: 'Vòng bảng và các series loại trực tiếp, cùng luật chơi.',
   setupGroupsDesc: 'Chia bảng rồi tạo lịch các trận vòng bảng.', setupAdvDesc: 'Tạo nhánh đấu và kết thúc vòng bảng.',
+  sectionCount: '{n} trận', sec_now: 'Đang đấu', sec_upcoming: 'Sắp tới', sec_done: 'Đã xong', sec_noCourt: 'Chưa xếp sân',
+  by_order: 'Thứ tự', by_court: 'Theo sân', by_team: 'Theo đội', by_group: 'Theo bảng',
+  f_court: 'Sân', f_team: 'Đội', f_group: 'Bảng / vòng', all: 'Tất cả', clearFilters: 'Xóa lọc',
   groupsMatches: 'Bảng đấu & trận', activeKeys: '{n} mã đang hoạt động', navMenu: 'Menu',
 } as const
 
@@ -125,6 +128,9 @@ const en: Record<Key, string> = {
   setupTournamentDesc: 'Tournament name and date.', setupCourtsDesc: 'Add, rename and reorder courts.',
   setupTeamsDesc: 'Add teams one by one or paste a list from Excel.', setupStagesDesc: 'Group stage and knockout series, with game rules.',
   setupGroupsDesc: 'Split teams into groups, then generate group matches.', setupAdvDesc: 'Generate brackets and close the group stage.',
+  sectionCount: '{n} match(es)', sec_now: 'Now playing', sec_upcoming: 'Upcoming', sec_done: 'Finished', sec_noCourt: 'No court yet',
+  by_order: 'Order', by_court: 'By court', by_team: 'By team', by_group: 'By group',
+  f_court: 'Court', f_team: 'Team', f_group: 'Group / stage', all: 'All', clearFilters: 'Clear filters',
   groupsMatches: 'Groups & matches', activeKeys: '{n} active keys', navMenu: 'Menu',
 }
 

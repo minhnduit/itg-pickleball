@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { TidGate } from '../components/TidGate'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { LangToggle, useT } from '../lib/i18n'
 import { useTournamentData } from '../lib/useTournamentData'
 import { norm } from '../lib/display'
-import { courtPath, tvPath } from '../lib/paths'
+import { courtPath } from '../lib/paths'
 import { computeGroupStandings, groupComplete } from '../lib/standings'
 import { ScoreCard } from '../components/ScoreCard'
 import { GroupTable } from '../components/GroupTable'
 import { BracketView } from '../components/BracketView'
 import { MatchRow } from '../components/MatchRow'
+import { BYS, filterMatches, sectionize, type By } from '../lib/schedule'
 import { Icon, type IconName } from '../components/Icon'
 
 const TABS = [['live', 'court'], ['schedule', 'list'], ['groups', 'users'], ['brackets', 'trophy']] as const satisfies readonly (readonly [string, IconName])[]
@@ -19,8 +20,18 @@ function PublicTournament({ tid }: { tid: string }) {
   const t = useT()
   const { data, loading } = useTournamentData(tid)
   const tk = data.tournament ?? { id: tid, slug: null }
-  const [tab, setTab] = useState<Tab>('live')
+  const [sp, setSp] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => (['by', 'court', 'team', 'group'].some(k => sp.has(k)) ? 'schedule' : 'live'))
   const [q, setQ] = useState('')
+  const by: By = BYS.find(b => b === sp.get('by')) ?? 'order'
+  const pick = (k: string, ok: string[]) => { const v = sp.get(k); return v && ok.includes(v) ? v : undefined }
+  const flt = {
+    court: pick('court', ['none', ...data.courts.map(c => c.id)]),
+    team: pick('team', data.teams.map(x => x.id)),
+    group: pick('group', [...data.groups.map(g => g.id), ...data.stages.filter(s => s.kind === 'knockout').map(s => s.id)]),
+  }
+  const setParam = (k: string, v?: string) => setSp(p => { const n = new URLSearchParams(p); if (v && !(k === 'by' && v === 'order')) n.set(k, v); else n.delete(k); return n }, { replace: true })
+  const hasFilter = !!(flt.court || flt.team || flt.group)
 
   const needle = norm(q.trim())
   const myTeams = needle
@@ -36,12 +47,10 @@ function PublicTournament({ tid }: { tid: string }) {
     <div className="min-h-screen pb-20 sm:pb-6">
       <header className="sticky top-0 z-20 border-b-2 border-gold bg-brand-900 text-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-3">
-          <Link to="/" aria-label={t('home')} className="btn btn-ghost !h-9 !px-2 !text-white hover:!bg-brand-800"><Icon name="chevronLeft" /></Link>
           <div className="min-w-0 flex-1">
             <div className="display truncate text-xl leading-tight">{data.tournament?.name ?? t('loading')}</div>
             <div className="text-xs text-brand-100">{data.tournament?.event_date}</div>
           </div>
-          <Link to={tvPath(tk)} aria-label={t('tv')} className="btn btn-ghost !h-9 !px-2 !text-white hover:!bg-brand-800"><Icon name="tv" /></Link>
           <LangToggle dark />
         </div>
         <div className="mx-auto max-w-3xl px-3 pb-3">
@@ -74,7 +83,44 @@ function PublicTournament({ tid }: { tid: string }) {
                   : <div key={c.id} className="card p-4"><div className="font-bold">{c.name}</div><div className="muted text-sm">{t('noCurrent')}</div></div>)}
               </div>
             )}
-            {tab === 'schedule' && <div className="space-y-2">{data.matches.map(m => <MatchRow key={m.id} m={m} data={data} />)}</div>}
+            {tab === 'schedule' && (
+              <div className="space-y-3">
+                <div className="card space-y-3 p-3">
+                  <div className="grid grid-cols-4 gap-1 rounded-lg bg-ink-100 p-1">
+                    {BYS.map(b => <button key={b} onClick={() => setParam('by', b)} className={`tab !rounded-md !px-1 text-xs sm:text-sm ${by === b ? 'tab-active' : ''}`}>{t(`by_${b}` as const)}</button>)}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label className="block min-w-0"><span className="label">{t('f_court')}</span>
+                      <select className="input" value={flt.court ?? ''} onChange={e => setParam('court', e.target.value)}>
+                        <option value="">{t('all')}</option>
+                        {[...data.courts].sort((a, b) => a.sort - b.sort).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        <option value="none">{t('sec_noCourt')}</option>
+                      </select></label>
+                    <label className="block min-w-0"><span className="label">{t('f_team')}</span>
+                      <select className="input" value={flt.team ?? ''} onChange={e => setParam('team', e.target.value)}>
+                        <option value="">{t('all')}</option>
+                        {[...data.teams].sort((a, b) => a.name.localeCompare(b.name, 'vi')).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                      </select></label>
+                    <label className="block min-w-0"><span className="label">{t('f_group')}</span>
+                      <select className="input" value={flt.group ?? ''} onChange={e => setParam('group', e.target.value)}>
+                        <option value="">{t('all')}</option>
+                        {data.groups.filter(g => g.stage_id === rr?.id).sort((a, b) => a.sort - b.sort).map(g => <option key={g.id} value={g.id}>{t('groupN', { name: g.name })}</option>)}
+                        {data.stages.filter(s => s.kind === 'knockout').sort((a, b) => a.sort - b.sort).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select></label>
+                  </div>
+                  {hasFilter && <button className="btn btn-ghost" onClick={() => setSp(p => { const n = new URLSearchParams(p); ['court', 'team', 'group'].forEach(k => n.delete(k)); return n }, { replace: true })}>{t('clearFilters')}</button>}
+                </div>
+                {(() => {
+                  const secs = sectionize(filterMatches(data.matches, flt), by, data, t, flt.team)
+                  return secs.length ? secs.map(sec => (
+                    <section key={sec.key}>
+                      {sec.title && <h3 className="section-title mb-2">{sec.title} <span className="muted font-normal">· {t('sectionCount', { n: sec.matches.length })}</span></h3>}
+                      <div className="space-y-2">{sec.matches.map(m => <MatchRow key={`${sec.key}-${m.id}`} m={m} data={data} />)}</div>
+                    </section>
+                  )) : <div className="muted text-sm">{t('nothingFound')}</div>
+                })()}
+              </div>
+            )}
             {tab === 'groups' && (
               <div className="space-y-4">
                 {data.groups.filter(g => g.stage_id === rr?.id).map(g => {

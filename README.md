@@ -7,6 +7,8 @@
 
 Organizers can reorder the schedule: per-court queue with move up/down, play next, delay, remove from court, and cancel call (Courts board and Matches tab).
 
+The public Schedule tab can be organized by order / court / team / group and filtered by court, team and group; the choice lives in the URL (`?by=court&team=<id>&group=<id>`) so it can be shared.
+
 ## Local dev
 Copy `.env.example` to `.env.local`, fill in the URL and anon key, then `npm install && npm run dev`.
 
