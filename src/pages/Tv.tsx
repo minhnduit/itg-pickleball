@@ -7,10 +7,12 @@ import { displayLabel, teamName } from '../lib/display'
 import { computeGroupStandings, groupComplete } from '../lib/standings'
 import { ScoreCard } from '../components/ScoreCard'
 import { GroupTable } from '../components/GroupTable'
+import { ChampionCard } from '../components/ChampionCard'
+import { stageChampion } from '../lib/bracket'
 import { BracketView } from '../components/BracketView'
 
-const VIEWS = ['courts', 'standings', 'brackets', 'upnext'] as const
-type View = (typeof VIEWS)[number]
+const ALL_VIEWS = ['courts', 'standings', 'brackets', 'upnext', 'champions'] as const
+type View = (typeof ALL_VIEWS)[number]
 
 function Tv({ tid }: { tid: string }) {
   const t = useT()
@@ -22,6 +24,12 @@ function Tv({ tid }: { tid: string }) {
   const [paused, setPaused] = useState(false)
   const [nav, setNav] = useState(0)
 
+  const champs = data.stages.filter(s => s.kind === 'knockout').flatMap(s => {
+    const team = data.teams.find(x => x.id === stageChampion(s, data.matches))
+    return team ? [{ stage: s, team }] : []
+  })
+  // 'champions' only exists once a champion does; it drops out of rotation, keys and dots otherwise
+  const VIEWS: readonly View[] = champs.length ? ALL_VIEWS : ALL_VIEWS.filter(v => v !== 'champions')
   const raw = params.get('view')
   const pinned = raw && (VIEWS as readonly string[]).includes(raw) ? (raw as View) : null
   const cur = pinned ? VIEWS.indexOf(pinned) : idx % VIEWS.length
@@ -55,7 +63,7 @@ function Tv({ tid }: { tid: string }) {
       let act: (() => void) | null = null
       if (e.key === 'ArrowRight' || e.key === 'PageDown') act = () => go(cur + 1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') act = () => go(cur - 1)
-      else if (e.key >= '1' && e.key <= '4') act = () => go(Number(e.key) - 1)
+      else if (e.key >= '1' && e.key <= '5' && Number(e.key) <= VIEWS.length) act = () => go(Number(e.key) - 1)
       else if (e.key === ' ' || e.key === 'k') act = () => setPaused(p => !p)
       if (!act) return
       e.preventDefault()
@@ -115,10 +123,28 @@ function Tv({ tid }: { tid: string }) {
               })}
             </div>
           )}
-          {view === 'brackets' && data.stages.filter(s => s.kind === 'knockout').map(s => (
-            <div key={s.id} className="mb-8"><h3 className="display mb-3 text-4xl text-gold">{s.name}</h3>
-              <BracketView dark stage={s} matches={data.matches} allMatches={data.matches} teams={data.teams} groups={data.groups} stages={data.stages} /></div>
-          ))}
+          {view === 'brackets' && (() => {
+            const kos = data.stages.filter(s => s.kind === 'knockout')
+            return (
+              <div className="grid gap-10" style={{ gridTemplateColumns: `repeat(${Math.max(1, kos.length)}, 1fr)` }}>
+                {kos.map(s => {
+                  const c = champs.find(x => x.stage.id === s.id)
+                  return (
+                    <div key={s.id} className="min-w-0">
+                      <h3 className="display mb-3 text-4xl text-gold">{s.name}</h3>
+                      {c && <div className="mb-4"><ChampionCard size="tv" dark team={c.team} stageName={s.name} /></div>}
+                      <BracketView tv dark stage={s} matches={data.matches} allMatches={data.matches} teams={data.teams} groups={data.groups} stages={data.stages} />
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+          {view === 'champions' && (
+            <div className="flex h-[900px] flex-col justify-center gap-10">
+              {champs.map(c => <ChampionCard key={c.stage.id} size="tv" dark team={c.team} stageName={c.stage.name} />)}
+            </div>
+          )}
           {view === 'upnext' && (
             <ul className="space-y-3">
               {upNext.map(m => (

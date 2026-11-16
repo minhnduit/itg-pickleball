@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildBracket, buildKnockout, seedPositions, seedQualifiers, type Entry } from './bracket'
+import { buildBracket, stageChampion, buildKnockout, seedPositions, seedQualifiers, type Entry } from './bracket'
 import type { StandingRow } from './standings'
+import type { Match, Stage } from './types'
 
 const rules = { pointsTo: 11, winBy: 2, cap: 15 }
 const mk = (n: number, groupOf: (i: number) => string = i => `g${i}`): Entry[] =>
@@ -135,4 +136,13 @@ describe('buildKnockout template', () => {
     const used = b.flatMap(m => [m.a, m.b]).filter(s => s.kind === 'entry').map(s => (s as { slot: string }).slot)
     expect(used).not.toContain('G:D:4')
   })
+})
+
+describe('stageChampion', () => {
+  const st = { id: 's', kind: 'knockout' } as Stage
+  const m = (round: number, status: string, winner: 'A' | 'B' | null) =>
+    ({ id: round, stage_id: 's', round, status, winner, team_a_id: 'a', team_b_id: 'b' }) as unknown as Match
+  it('confirmed final -> winner', () => expect(stageChampion(st, [m(1, 'confirmed', 'A'), m(2, 'confirmed', 'B')])).toBe('b'))
+  it('finished but not confirmed -> null', () => expect(stageChampion(st, [m(2, 'finished', 'A')])).toBeNull())
+  it('no matches -> null', () => expect(stageChampion(st, [])).toBeNull())
 })

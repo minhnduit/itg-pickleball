@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { scorePath } from '../../lib/paths'
 import { supabase } from '../../lib/supabase'
-import { orgSetScore } from '../../lib/api'
+import { orgConfirm, orgSetScore } from '../../lib/api'
 import { displayLabel, teamName } from '../../lib/display'
 import { useT } from '../../lib/i18n'
 import type { TabProps } from '../../lib/useTournamentData'
@@ -18,7 +18,7 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
   const nav = useNavigate()
   const [now, setNow] = useState(Date.now())
   const [busy, setBusy] = useState(false)
-  const [override, setOverride] = useState<{ courtId: string; a: string; b: string; reason: string } | null>(null)
+  const [override, setOverride] = useState<{ courtId: string; matchId: number; a: string; b: string; reason: string } | null>(null)
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i) }, [])
 
   const ready = (m: Match) => m.status === 'scheduled' && !!m.team_a_id && !!m.team_b_id
@@ -50,10 +50,13 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
     if (pick) patch(pick.id, { court_id: c.id, status: 'called' })
   }
 
-  const submitOverride = async (m: Match) => {
-    if (!override) return
+  const confirm = async (id: number) => {
+    try { await orgConfirm(id); reload() } catch (e) { toast.error((e as Error).message) }
+  }
+
+  const submitOverride = async (ov: NonNullable<typeof override>) => {
     try {
-      await orgSetScore(m.id, Number(override.a), Number(override.b), override.reason)
+      await orgSetScore(ov.matchId, Number(ov.a), Number(ov.b), ov.reason)
       setOverride(null); reload()
     } catch (e) { toast.error((e as Error).message) }
   }
@@ -69,13 +72,15 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
       {data.courts.map(c => {
         const onCourt = data.matches.filter(m => m.court_id === c.id)
         const live = onCourt.find(m => m.status === 'live')
-        const cur = live ?? onCourt.find(m => m.status === 'called')
+        const active = live ?? onCourt.find(m => m.status === 'called')
+        // unconfirmed finished match stays visible (court is free meanwhile)
+        const cur = active ?? onCourt.filter(m => m.status === 'finished').sort((a, b) => (b.finished_at ?? '').localeCompare(a.finished_at ?? ''))[0]
         const queue = onCourt.filter(m => m.status === 'scheduled')
         const next = queue.find(ready)
         const lastFinish = Math.max(0, ...onCourt.filter(m => m.finished_at).map(m => new Date(m.finished_at!).getTime()))
-        const idle = !cur && (lastFinish === 0 || now - lastFinish > 120000)
+        const idle = !active && (lastFinish === 0 || now - lastFinish > 120000)
         const idleMin = lastFinish ? Math.floor((now - lastFinish) / 60000) : 0
-        const ov = override?.courtId === c.id ? override : null
+        const ov = override?.courtId === c.id && override.matchId === cur?.id ? override : null
         const row = (m: Match, side: 'A' | 'B') => {
           const name = teamName(data.teams, side === 'A' ? m.team_a_id : m.team_b_id)
           return (
@@ -125,23 +130,24 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button className="btn btn-primary btn-sm" disabled={!!cur || (!next && !unassigned.length)}
-                onClick={() => callNext(c, !!cur, next)}>{t('callNext')}</button>
+              <button className="btn btn-primary btn-sm" disabled={!!active || (!next && !unassigned.length)}
+                onClick={() => callNext(c, !!active, next)}>{t('callNext')}</button>
               <select className="input !h-8 !w-auto text-xs" value="" onChange={e => e.target.value && patch(Number(e.target.value), { court_id: c.id })}>
                 <option value="">{t('assignMatch')}</option>
                 {unassigned.map(m => (
                   <option key={m.id} value={m.id}>{displayLabel(m, data.stages)} {teamName(data.teams, m.team_a_id)} – {teamName(data.teams, m.team_b_id)}</option>
                 ))}
               </select>
-              {cur && <button className="btn btn-secondary btn-sm" onClick={() => nav(scorePath(data.tournament ?? { id: tid, slug: null }, cur.id))}>{t('takeOver')}</button>}
-              {cur && <button className="btn btn-ghost btn-sm" onClick={() => setOverride(ov ? null : { courtId: c.id, a: String(cur.score_a), b: String(cur.score_b), reason: '' })}>{t('override')}</button>}
+              {active && <button className="btn btn-secondary btn-sm" onClick={() => nav(scorePath(data.tournament ?? { id: tid, slug: null }, cur.id))}>{t('takeOver')}</button>}
+              {cur?.status === 'finished' && <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act(() => confirm(cur.id))}>{t('confirm')}</button>}
+              {cur && <button className="btn btn-ghost btn-sm" onClick={() => setOverride(ov ? null : { courtId: c.id, matchId: cur.id, a: String(cur.score_a), b: String(cur.score_b), reason: '' })}>{t('override')}</button>}
             </div>
             {ov && cur && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <input className="input !h-8 !w-16" type="number" min={0} value={ov.a} onChange={e => setOverride({ ...ov, a: e.target.value })} />
                 <input className="input !h-8 !w-16" type="number" min={0} value={ov.b} onChange={e => setOverride({ ...ov, b: e.target.value })} />
                 <input className="input !h-8 min-w-0 flex-1" placeholder={t('reason')} value={ov.reason} onChange={e => setOverride({ ...ov, reason: e.target.value })} />
-                <button className="btn btn-primary btn-sm" onClick={() => submitOverride(cur)}>{t('save')}</button>
+                <button className="btn btn-primary btn-sm" onClick={() => submitOverride(ov)}>{t('save')}</button>
               </div>
             )}
           </div>

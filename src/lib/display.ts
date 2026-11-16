@@ -27,3 +27,13 @@ export function slotLabel(slot: string | null, d: { groups: Group[]; matches: Ma
 
 // case/accent-insensitive text for search
 export const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+
+import type { Lang } from './i18n'
+const loc = (l: Lang) => (l === 'vi' ? 'vi-VN' : 'en-GB')
+const DATE = { day: '2-digit', month: '2-digit', year: 'numeric' } as const
+const fmt = (d: Date, lang: Lang, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(loc(lang), o).format(d)
+export const fmtDateTime = (iso: string, lang: Lang) => {
+  const d = new Date(iso)
+  return `${fmt(d, lang, DATE)} ${fmt(d, lang, { hour: '2-digit', minute: '2-digit', hour12: false })}`
+}
+export const fmtDate = (isoDate: string, lang: Lang) => fmt(new Date(`${isoDate}T00:00:00`), lang, DATE)

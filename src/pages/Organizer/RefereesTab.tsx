@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { printCourtsPath, refUrl } from '../../lib/paths'
 import { supabase } from '../../lib/supabase'
 import { orgCreateRefToken, orgRevokeRefToken } from '../../lib/api'
-import { useT } from '../../lib/i18n'
+import { fmtDateTime } from '../../lib/display'
+import { useLang, useT } from '../../lib/i18n'
 import { useToast } from '../../components/Toast'
 import { QrCard } from '../../components/QrCard'
 import { Icon } from '../../components/Icon'
@@ -12,10 +13,12 @@ import type { Court, RefTokenRow } from '../../lib/types'
 
 function CourtRefs({ court, tokens, refresh }: { court: Court; tokens: RefTokenRow[]; refresh: () => void }) {
   const t = useT()
+  const lang = useLang()
   const toast = useToast()
   const [pin, setPin] = useState('')
   const [hours, setHours] = useState('18')
   const [label, setLabel] = useState('')
+  const [copied, setCopied] = useState(false)
   const [created, setCreated] = useState<{ key: string; pin: string } | null>(null)
 
   const status = (r: RefTokenRow) =>
@@ -24,7 +27,7 @@ function CourtRefs({ court, tokens, refresh }: { court: Court; tokens: RefTokenR
     e.preventDefault()
     try {
       const key = await orgCreateRefToken(court.id, pin || null, Number(hours), label || null)
-      setCreated({ key, pin }); setPin(''); setLabel(''); refresh()
+      setCreated({ key, pin }); setPin(''); setLabel(''); refresh(); toast.info(t('msgKeyCreated'))
     } catch (err) { toast.error((err as Error).message) }
   }
   const revoke = async (id: string) => {
@@ -48,7 +51,7 @@ function CourtRefs({ court, tokens, refresh }: { court: Court; tokens: RefTokenR
                 <tr key={r.id}>
                   <td>{r.label ?? ''}</td>
                   <td><span className={`pill ${tone(r)}`}>{status(r)}</span></td>
-                  <td className="muted text-xs">{new Date(r.expires_at).toLocaleString()}</td>
+                  <td className="muted text-xs">{fmtDateTime(r.expires_at, lang)}</td>
                   <td className="text-right">{!r.revoked && <button className="btn btn-danger btn-sm" onClick={() => revoke(r.id)}>{t('revoke')}</button>}</td>
                 </tr>
               ))}
@@ -65,7 +68,15 @@ function CourtRefs({ court, tokens, refresh }: { court: Court; tokens: RefTokenR
           <div className="rounded-lg border-2 border-gold p-4 text-center">
             <div className="no-print mb-2 text-sm font-semibold">{t('shownOnce')}</div>
             <QrCard eyebrow={t('eyebrowRef')} title={court.name} url={refUrl(created.key)} subtitle={t('refQrSubtitle')} pin={created.pin ? t('pinLabel', { pin: created.pin }) : null} />
-            <div><button className="no-print btn btn-dark mt-3" onClick={() => window.print()}>{t('print')}</button></div>
+            <div className="no-print mx-auto mt-3 max-w-md space-y-2">
+              <div className="break-all rounded-md bg-ink-50 p-2 text-left font-mono text-xs select-all">{refUrl(created.key)}</div>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button className="btn btn-secondary btn-sm" onClick={() => (navigator.clipboard?.writeText(refUrl(created.key)) ?? Promise.reject()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }).catch(() => toast.error(t('copyFailed')))}>{copied ? t('copied') : t('copyLink')}</button>
+                {typeof navigator.share === 'function' && <button className="btn btn-secondary btn-sm" onClick={() => navigator.share({ title: court.name, url: refUrl(created.key) }).catch(() => {})}>{t('share')}</button>}
+                <button className="btn btn-dark btn-sm" onClick={() => window.print()}>{t('print')}</button>
+              </div>
+              <div className="muted text-xs">{t('linkWarning')}</div>
+            </div>
           </div>
         )}
       </div>

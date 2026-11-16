@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { TidGate } from '../components/TidGate'
 import { Link, useSearchParams } from 'react-router-dom'
-import { LangToggle, useT } from '../lib/i18n'
+import { LangToggle, useLang, useT } from '../lib/i18n'
 import { useTournamentData } from '../lib/useTournamentData'
-import { norm } from '../lib/display'
+import { fmtDate, norm } from '../lib/display'
 import { courtPath } from '../lib/paths'
 import { computeGroupStandings, groupComplete } from '../lib/standings'
 import { ScoreCard } from '../components/ScoreCard'
 import { GroupTable } from '../components/GroupTable'
+import { ChampionCard } from '../components/ChampionCard'
+import { stageChampion } from '../lib/bracket'
 import { BracketView } from '../components/BracketView'
 import { MatchRow } from '../components/MatchRow'
 import { BYS, filterMatches, sectionize, type By } from '../lib/schedule'
@@ -18,6 +20,7 @@ type Tab = (typeof TABS)[number][0]
 
 function PublicTournament({ tid }: { tid: string }) {
   const t = useT()
+  const lang = useLang()
   const { data, loading } = useTournamentData(tid)
   const tk = data.tournament ?? { id: tid, slug: null }
   const [sp, setSp] = useSearchParams()
@@ -43,13 +46,19 @@ function PublicTournament({ tid }: { tid: string }) {
     c, m: data.matches.find(m => m.court_id === c.id && m.status === 'live') ?? data.matches.find(m => m.court_id === c.id && m.status === 'called'),
   }))
 
+  const champion = (s: (typeof data.stages)[number]) => {
+    const team = data.teams.find(x => x.id === stageChampion(s, data.matches))
+    return team ? <div key={s.id} className="mb-3"><ChampionCard size="sm" team={team} stageName={s.name} /></div> : null
+  }
+  const kos = data.stages.filter(s => s.kind === 'knockout')
+
   return (
     <div className="min-h-screen pb-20 sm:pb-6">
       <header className="sticky top-0 z-20 border-b-2 border-gold bg-brand-900 text-white">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-3">
           <div className="min-w-0 flex-1">
             <div className="display truncate text-xl leading-tight">{data.tournament?.name ?? t('loading')}</div>
-            <div className="text-xs text-brand-100">{data.tournament?.event_date}</div>
+            <div className="text-xs text-brand-100">{data.tournament?.event_date ? fmtDate(data.tournament.event_date, lang) : ''}</div>
           </div>
           <LangToggle dark />
         </div>
@@ -76,6 +85,7 @@ function PublicTournament({ tid }: { tid: string }) {
                 <button key={k} onClick={() => setTab(k)} className={`tab ${tab === k ? 'tab-active' : ''}`}>{t(`pub_${k}` as const)}</button>
               ))}
             </div>
+            {tab === 'live' && kos.map(champion)}
             {tab === 'live' && (
               <div className="grid gap-3 sm:grid-cols-2">
                 {liveByCourt.map(({ c, m }) => m
@@ -136,7 +146,7 @@ function PublicTournament({ tid }: { tid: string }) {
               </div>
             )}
             {tab === 'brackets' && data.stages.filter(s => s.kind === 'knockout').map(s => (
-              <div key={s.id} className="mb-6"><h3 className="section-title mb-2">{s.name}</h3>
+              <div key={s.id} className="mb-6"><h3 className="section-title mb-2">{s.name}</h3>{champion(s)}
                 <BracketView stage={s} matches={data.matches} allMatches={data.matches} teams={data.teams} groups={data.groups} stages={data.stages} /></div>
             ))}
           </>

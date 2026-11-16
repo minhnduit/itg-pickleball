@@ -3,21 +3,23 @@ import { Link } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Tournament } from '../lib/types'
-import { LangToggle, useT } from '../lib/i18n'
+import { LangToggle, useLang, useT } from '../lib/i18n'
 import { adminPath, isValidSlug, pubPath, slugify, tvPath } from '../lib/paths'
+import { fmtDate } from '../lib/display'
 import { useToast } from '../components/Toast'
 import { SlugField } from '../components/SlugField'
 import { BRAND_NAME } from '../components/Wordmark'
 import { Icon } from '../components/Icon'
 
 function DateBlock({ date }: { date: string | null }) {
+  const lang = useLang()
   const d = date ? new Date(`${date}T00:00:00`) : null
   return (
     <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-md bg-brand-50 text-brand-700">
       {d ? (
         <>
           <span className="font-score text-3xl font-bold leading-none">{d.getDate()}</span>
-          <span className="label !text-brand-700">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
+          <span className="label !text-brand-700">{d.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-GB', { month: 'short' })}</span>
         </>
       ) : <Icon name="trophy" size={26} />}
     </div>
@@ -26,6 +28,7 @@ function DateBlock({ date }: { date: string | null }) {
 
 export default function Home() {
   const t = useT()
+  const lang = useLang()
   const toast = useToast()
   const [list, setList] = useState<Tournament[]>([])
   const [session, setSession] = useState<Session | null>(null)
@@ -82,7 +85,7 @@ export default function Home() {
             <DateBlock date={x.event_date} />
             <div className="min-w-0 flex-1">
               <div className="truncate font-bold">{x.name}</div>
-              <div className="muted text-sm">{x.event_date}</div>
+              <div className="muted text-sm">{x.event_date ? fmtDate(x.event_date, lang) : ''}</div>
             </div>
             <div className="flex gap-2">
               <Link className="btn btn-secondary btn-sm" to={pubPath(x)}>{t('public')}</Link>

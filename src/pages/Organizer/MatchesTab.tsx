@@ -2,7 +2,9 @@ import { Fragment, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { orgConfirm, orgReopen, orgSetScore } from '../../lib/api'
 import { displayLabel, slotLabel, teamName } from '../../lib/display'
-import { useT } from '../../lib/i18n'
+import { friendlyError } from '../../lib/errors'
+import { fmtDateTime } from '../../lib/display'
+import { useLang, useT } from '../../lib/i18n'
 import type { TabProps } from '../../lib/useTournamentData'
 import type { Match, MatchEvent } from '../../lib/types'
 import { queueUpdates, type QueueMove } from '../../lib/queue'
@@ -14,6 +16,7 @@ const STATUSES = ['scheduled', 'called', 'live', 'finished', 'confirmed'] as con
 
 export default function MatchesTab({ data, reload }: TabProps) {
   const t = useT()
+  const lang = useLang()
   const toast = useToast()
   const [f, setF] = useState({ stage: '', group: '', status: '', court: '' })
   const [ov, setOv] = useState<{ id: number; a: string; b: string; reason: string } | null>(null)
@@ -48,7 +51,7 @@ export default function MatchesTab({ data, reload }: TabProps) {
   }
   const confirmAll = async () => {
     for (const m of rows.filter(x => x.status === 'finished')) {
-      try { await orgConfirm(m.id) } catch (e) { toast.error(`${displayLabel(m, data.stages)}: ${(e as Error).message}`) }
+      try { await orgConfirm(m.id) } catch (e) { toast.error(`${displayLabel(m, data.stages)}: ${friendlyError((e as Error).message, t)}`) }
     }
     reload()
   }
@@ -138,7 +141,7 @@ export default function MatchesTab({ data, reload }: TabProps) {
                     <ul className="space-y-1 text-xs">
                       {events.map(ev => (
                         <li key={ev.id} className="flex flex-wrap items-center gap-2">
-                          <span className="tnum text-ink-500">{new Date(ev.created_at).toLocaleTimeString()}</span>
+                          <span className="tnum text-ink-500">{fmtDateTime(ev.created_at, lang)}</span>
                           <span className="pill bg-ink-100 text-ink-700">{t(`ev_${ev.kind}` as const)}</span>
                           {ev.rally_winner && <span className="font-semibold">{ev.rally_winner}</span>}
                           <span className="font-score text-base font-bold tnum">{ev.score_a}–{ev.score_b}</span>

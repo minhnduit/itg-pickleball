@@ -1,4 +1,5 @@
 import type { StandingRow } from './standings'
+import type { Match, Stage } from './types'
 
 export type Entry = { slot: string; teamId: string | null; groupId: string }
 export type BSide = { kind: 'entry'; slot: string } | { kind: 'winner'; key: string }
@@ -159,4 +160,12 @@ export function buildKnockout(
     }
   }
   return out.sort((x, y) => x.round - y.round || x.position - y.position)
+}
+
+export function stageChampion(stage: Stage, matches: Match[]): string | null {
+  const mine = matches.filter(m => m.stage_id === stage.id)
+  if (stage.kind !== 'knockout' || !mine.length) return null
+  const fin = mine.reduce((a, b) => (b.round > a.round ? b : a))
+  if (fin.status !== 'confirmed' || !fin.winner) return null
+  return (fin.winner === 'A' ? fin.team_a_id : fin.team_b_id) ?? null
 }

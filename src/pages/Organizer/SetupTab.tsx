@@ -34,8 +34,8 @@ function useDb({ reload }: TabProps) {
     if (r.error) throw new Error(r.error.message)
     return r
   }
-  const run = async (fn: () => PromiseLike<unknown>) => {
-    try { await fn(); await reload(); return true } catch (e) { toast.error((e as Error).message); return false }
+  const run = async (fn: () => PromiseLike<unknown>, ok?: string) => {
+    try { await fn(); await reload(); if (ok) toast.info(ok); return true } catch (e) { toast.error((e as Error).message); return false }
   }
   return { run, check, toast }
 }
@@ -54,7 +54,7 @@ function TournamentSection(p: TabProps) {
   const save = async () => {
     if (slug && !isValidSlug(slug)) return toast.error(t('slugInvalid'))
     const ok = await run(async () => check(await supabase.from('tournaments')
-      .update({ name, event_date: date || null, slug: slug || null }).eq('id', p.tid)))
+      .update({ name, event_date: date || null, slug: slug || null }).eq('id', p.tid)), t('saved'))
     if (ok && (slug || p.tid) !== urlKey) nav(adminPath({ id: p.tid, slug: slug || null }), { replace: true })
   }
   return (
@@ -119,7 +119,8 @@ function TeamsSection(p: TabProps) {
   const rr = p.data.stages.find(s => s.kind === 'round_robin')
   const stageGroups = p.data.groups.filter(g => g.stage_id === rr?.id)
   const insert = (rows: { name: string; player1: string; player2: string; seed: number | null }[]) =>
-    run(async () => check(await supabase.from('teams').insert(rows.map(r => ({ ...r, tournament_id: p.tid })))))
+    run(async () => check(await supabase.from('teams').insert(rows.map(r => ({ ...r, tournament_id: p.tid })))),
+      rows.length === 1 ? t('msgTeamAdded') : t('msgTeamsImported', { n: rows.length }))
 
   return (
     <Section step={3} title={t('teams')} desc={t('setupTeamsDesc')}>
@@ -189,7 +190,7 @@ function StageRow({ stage, p }: { stage: Stage; p: TabProps }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
       <input className={inp} value={s.name} onChange={e => setS({ ...s, name: e.target.value })} />
-      <span className="pill bg-ink-100 text-ink-700">{stage.kind}</span>
+      <span className="pill bg-ink-100 text-ink-700">{t(`kind_${stage.kind}` as const)}</span>
       {t('pointsTo')} {num('points_to')} {t('winBy')} {num('win_by')} {t('cap')} {num('cap')}
       <button className={btn} onClick={save}>{t('save')}</button>
       {stage.kind === 'round_robin' && (
@@ -216,7 +217,7 @@ function StagesSection(p: TabProps) {
       { ...base, name: 'Seria A', kind: 'knockout', sort: 1, config: { source_stage_id: id, rank_from: 1, rank_to: n } },
       { ...base, name: 'Seria B', kind: 'knockout', sort: 2, config: { source_stage_id: id, rank_from: n + 1, rank_to: null } },
     ]))
-  })
+  }, t('msgStagesCreated'))
   return (
     <Section step={4} title={t('stages')} desc={t('setupStagesDesc')}>
       {p.data.stages.length === 0 ? (
@@ -259,7 +260,7 @@ function GroupsSection(p: TabProps) {
       for (const [i, grp] of split.entries()) {
         for (const tm of grp) check(await supabase.from('teams').update({ group_id: ids[i].id }).eq('id', tm.id))
       }
-    })
+    }, t('msgGroupsSplit', { n: split.length }))
   }
 
   const generate = () => {
@@ -273,7 +274,7 @@ function GroupsSection(p: TabProps) {
         tournament_id: p.tid, stage_id: rr.id, group_id: s.groupId, round: s.round, position: s.position, label: s.label,
         queue_order: s.queueOrder, team_a_id: s.teamA, team_b_id: s.teamB,
       }))))
-    })
+    }, t('msgMatchesCreated', { n: sched.length }))
   }
 
   return (
@@ -338,13 +339,13 @@ function AdvancementSection(p: TabProps) {
       if (st.some(r => r.needsDecision)) return toast.error(t('errNeedsDecision'))
     }
     if (!groups.length) return toast.error(t('errNotAllConfirmed'))
-    run(() => build(true))
+    run(() => build(true), t('msgGroupClosed'))
   }
 
   return (
     <Section step={6} title={t('advancement')} desc={t('setupAdvDesc')}>
       <div className="flex gap-2">
-        <button className={btn} disabled={!kos.length || !groups.length || !!rr.config.closed} onClick={() => run(() => build(false))}>{t('generateBrackets')}</button>
+        <button className={btn} disabled={!kos.length || !groups.length || !!rr.config.closed} onClick={() => run(() => build(false), t('msgBracketsCreated'))}>{t('generateBrackets')}</button>
         <button className={primary} disabled={!kos.length} onClick={close}>{t('closeGroupStage')}</button>
         {rr.config.closed && <span className="pill bg-brand-50 text-brand-700">{t('closed')}</span>}
       </div>

@@ -67,6 +67,21 @@ const vi = {
   by_order: 'Thứ tự', by_court: 'Theo sân', by_team: 'Theo đội', by_group: 'Theo bảng',
   f_court: 'Sân', f_team: 'Đội', f_group: 'Bảng / vòng', all: 'Tất cả', clearFilters: 'Xóa lọc',
   groupsMatches: 'Bảng đấu & trận', activeKeys: '{n} mã đang hoạt động', navMenu: 'Menu',
+  champion: 'VÔ ĐỊCH', tvView_champions: 'Nhà vô địch',
+  copyLink: 'Sao chép liên kết', share: 'Chia sẻ',
+  linkWarning: 'Ai có liên kết này (và PIN) đều chấm điểm được sân này — chỉ gửi cho trọng tài.',
+  errWrongPin: 'Sai mã PIN', errReasonRequired: 'Cần nhập lý do',
+  errOtherDevice: 'Mã này đang dùng trên thiết bị khác — nhờ ban tổ chức cấp mã mới',
+  errNotClaimed: 'Mã chưa được kích hoạt — quét lại QR', errNotYourCourt: 'Trận này không thuộc sân của bạn',
+  errOrgOnly: 'Chỉ ban tổ chức được làm việc này', errReopenFirst: 'Trận đã xác nhận — hãy mở lại trước',
+  errDownstreamStarted: 'Trận vòng sau đã bắt đầu — không thể mở lại', errAlreadyStarted: 'Trận đã bắt đầu',
+  errNotFinished: 'Chỉ xác nhận được trận đã xong', errNothingToUndo: 'Không có gì để hoàn tác',
+  errTeamsNotSet: 'Chưa đủ hai đội', errPinFormat: 'PIN phải gồm 4–6 chữ số',
+  errSlugTaken: 'Đường dẫn ngắn đã được dùng', errNotLive: 'Trận chưa bắt đầu',
+  kind_round_robin: 'Vòng tròn', kind_knockout: 'Loại trực tiếp',
+  msgTeamsImported: 'Đã nhập {n} đội', msgTeamAdded: 'Đã thêm đội', msgStagesCreated: 'Đã tạo các giai đoạn',
+  msgGroupsSplit: 'Đã chia {n} bảng', msgMatchesCreated: 'Đã tạo {n} trận vòng bảng', msgBracketsCreated: 'Đã tạo nhánh đấu',
+  msgGroupClosed: 'Đã kết thúc vòng bảng, nhánh đấu đã cập nhật', saved: 'Đã lưu', copyFailed: 'Không sao chép được — hãy chọn và sao chép thủ công', msgKeyCreated: 'Đã tạo mã trọng tài',
 } as const
 
 type Key = keyof typeof vi
@@ -132,6 +147,21 @@ const en: Record<Key, string> = {
   by_order: 'Order', by_court: 'By court', by_team: 'By team', by_group: 'By group',
   f_court: 'Court', f_team: 'Team', f_group: 'Group / stage', all: 'All', clearFilters: 'Clear filters',
   groupsMatches: 'Groups & matches', activeKeys: '{n} active keys', navMenu: 'Menu',
+  champion: 'CHAMPION', tvView_champions: 'Champions',
+  copyLink: 'Copy link', share: 'Share',
+  linkWarning: 'Anyone with this link (and PIN) can score this court — send it only to the referee.',
+  errWrongPin: 'Wrong PIN', errReasonRequired: 'A reason is required',
+  errOtherDevice: 'This key is in use on another device — ask the organizer for a new one',
+  errNotClaimed: 'Key not claimed yet — scan the QR again', errNotYourCourt: 'This match is not on your court',
+  errOrgOnly: 'Organizers only', errReopenFirst: 'Match is confirmed — reopen it first',
+  errDownstreamStarted: 'A later match has already started — cannot reopen', errAlreadyStarted: 'Match already started',
+  errNotFinished: 'Only finished matches can be confirmed', errNothingToUndo: 'Nothing to undo',
+  errTeamsNotSet: 'Both teams must be set first', errPinFormat: 'PIN must be 4–6 digits',
+  errSlugTaken: 'That short link is already taken', errNotLive: 'Match is not live',
+  kind_round_robin: 'Round robin', kind_knockout: 'Knockout',
+  msgTeamsImported: 'Imported {n} teams', msgTeamAdded: 'Team added', msgStagesCreated: 'Stages created',
+  msgGroupsSplit: 'Split into {n} groups', msgMatchesCreated: 'Created {n} group matches', msgBracketsCreated: 'Brackets created',
+  msgGroupClosed: 'Group stage closed, brackets filled', saved: 'Saved', copyFailed: 'Copy failed — select and copy manually', msgKeyCreated: 'Referee key created',
 }
 
 export type Lang = 'vi' | 'en'
@@ -144,6 +174,10 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback((l: Lang) => { localStorage.setItem('plc_lang', l); setLangState(l) }, [])
   return <Ctx.Provider value={{ lang, setLang }}>{children}</Ctx.Provider>
 }
+
+export const isDictValue = (s: string) => Object.values(vi).includes(s as never) || Object.values(en).includes(s)
+
+export const useLang = () => useContext(Ctx).lang
 
 export function useT(): T {
   const { lang } = useContext(Ctx)

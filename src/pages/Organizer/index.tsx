@@ -3,7 +3,8 @@ import { TidGate } from '../../components/TidGate'
 import { Link } from 'react-router-dom'
 import { pubPath, tvPath } from '../../lib/paths'
 import { supabase } from '../../lib/supabase'
-import { LangToggle, useT } from '../../lib/i18n'
+import { LangToggle, useLang, useT } from '../../lib/i18n'
+import { fmtDate } from '../../lib/display'
 import { useTournamentData } from '../../lib/useTournamentData'
 import { Icon, type IconName } from '../../components/Icon'
 import { Wordmark } from '../../components/Wordmark'
@@ -18,6 +19,7 @@ const ICONS: Record<(typeof TABS)[number], IconName> = { courts: 'court', matche
 
 function Organizer({ tid }: { tid: string }) {
   const t = useT()
+  const lang = useLang()
   const { data, loading, error, reload } = useTournamentData(tid)
   const [tab, setTab] = useState<(typeof TABS)[number]>('courts')
   const tk = data.tournament ?? { id: tid, slug: null }
@@ -33,7 +35,7 @@ function Organizer({ tid }: { tid: string }) {
         </div>
         <div className="px-4 py-3 lg:py-5">
           <div className="truncate font-bold text-white">{data.tournament?.name ?? ''}</div>
-          <div className="text-xs text-brand-100/80">{data.tournament?.event_date}</div>
+          <div className="text-xs text-brand-100/80">{data.tournament?.event_date ? fmtDate(data.tournament.event_date, lang) : ''}</div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2 lg:flex-1 lg:flex-col lg:overflow-visible lg:pb-0">
           {TABS.map(k => (

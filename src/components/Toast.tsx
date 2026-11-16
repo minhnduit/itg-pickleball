@@ -1,3 +1,5 @@
+import { friendlyError } from '../lib/errors'
+import { isDictValue, useT } from '../lib/i18n'
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 type Toast = { id: number; msg: string; kind: 'error' | 'info' }
@@ -5,13 +7,14 @@ const Ctx = createContext<{ error: (m: string) => void; info: (m: string) => voi
 export const useToast = () => useContext(Ctx)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useT()
   const [items, setItems] = useState<Toast[]>([])
   const push = useCallback((msg: string, kind: Toast['kind']) => {
     const id = Date.now() + Math.random()
     setItems(x => [...x, { id, msg, kind }])
     setTimeout(() => setItems(x => x.filter(i => i.id !== id)), 5000)
   }, [])
-  const api = { error: (m: string) => push(m, 'error'), info: (m: string) => push(m, 'info') }
+  const api = { error: (m: string) => push(isDictValue(m) ? m : friendlyError(m, t), 'error'), info: (m: string) => push(m, 'info') }
   return (
     <Ctx.Provider value={api}>
       {children}

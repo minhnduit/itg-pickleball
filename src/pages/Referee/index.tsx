@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { isRefKeyDead, refClaim } from '../../lib/api'
 import { clearRefSession, getDeviceId, getRefSession, setRefSession, type RefSession } from '../../lib/device'
+import { friendlyError } from '../../lib/errors'
 import { LangToggle, useT } from '../../lib/i18n'
 import { sortMatches } from '../../lib/useTournamentData'
 import type { Match, Stage, Team } from '../../lib/types'
@@ -85,7 +86,10 @@ export default function Referee() {
   const onError = (msg: string) => {
     if (isRefKeyDead(msg)) { clearRefSession(); setSession(null); setDead(true) } else toast.error(msg)
   }
-  const onUpdate = (m: Match) => setMatches(ms => sortMatches([...ms.filter(x => x.id !== m.id), m]))
+  const onUpdate = (m: Match) => {
+    if (m.status === 'finished') setFocusId(m.id) // also covers special results recorded before the start
+    setMatches(ms => sortMatches([...ms.filter(x => x.id !== m.id), m]))
+  }
 
   const card = 'w-full rounded-xl border border-brand-800 bg-brand-900 p-6'
   if (dead) return <Centered><div className={`${card} text-xl font-bold`}>{t('newQr')}</div></Centered>
@@ -104,7 +108,7 @@ export default function Referee() {
     return (
       <Centered>
         <div className={`${card} space-y-4`}>
-          <div className="text-live">{claimErr}</div>
+          <div className="text-live">{friendlyError(claimErr, t)}</div>
           <button disabled={busy} className="btn btn-primary !h-14 w-full" onClick={() => { setClaimErr(null); claim(k, null) }}>{t('retry')}</button>
         </div>
       </Centered>
