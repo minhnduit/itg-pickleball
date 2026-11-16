@@ -5,6 +5,8 @@
 2. Auth -> disable public signups. Create organizer users manually in the Auth dashboard.
 3. The first organizer logs in, creates a tournament on the Home page and becomes its organizer. Add co-organizers by inserting rows into `organizers`.
 
+Organizers can reorder the schedule: per-court queue with move up/down, play next, delay, remove from court, and cancel call (Courts board and Matches tab).
+
 ## Local dev
 Copy `.env.example` to `.env.local`, fill in the URL and anon key, then `npm install && npm run dev`.
 

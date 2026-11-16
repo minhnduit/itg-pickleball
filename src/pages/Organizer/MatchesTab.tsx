@@ -5,6 +5,7 @@ import { displayLabel, slotLabel, teamName } from '../../lib/display'
 import { useT } from '../../lib/i18n'
 import type { TabProps } from '../../lib/useTournamentData'
 import type { Match, MatchEvent } from '../../lib/types'
+import { queueUpdates, type QueueMove } from '../../lib/queue'
 import { useToast } from '../../components/Toast'
 import { Avatar } from '../../components/Avatar'
 import { StatusPill } from '../../components/StatusPill'
@@ -16,6 +17,7 @@ export default function MatchesTab({ data, reload }: TabProps) {
   const toast = useToast()
   const [f, setF] = useState({ stage: '', group: '', status: '', court: '' })
   const [ov, setOv] = useState<{ id: number; a: string; b: string; reason: string } | null>(null)
+  const [busy, setBusy] = useState(false)
   const [logFor, setLogFor] = useState<number | null>(null)
   const [events, setEvents] = useState<MatchEvent[]>([])
 
@@ -24,11 +26,21 @@ export default function MatchesTab({ data, reload }: TabProps) {
     (!f.status || m.status === f.status) && (!f.court || (f.court === '-' ? m.court_id === null : m.court_id === f.court)))
 
   const attempt = async (fn: () => PromiseLike<unknown>) => {
-    try { await fn(); await reload() } catch (e) { toast.error((e as Error).message) }
+    setBusy(true)
+    try { await fn() } catch (e) { toast.error((e as Error).message) }
+    await reload(); setBusy(false)
   }
-  const update = (id: number, p: { court_id?: string | null; status?: 'called' }) => attempt(async () => {
-    const { error } = await supabase.from('matches').update(p).eq('id', id)
+  const update = (id: number, p: { court_id?: string | null; status?: 'called' | 'scheduled' }, only?: 'called' | 'scheduled') => attempt(async () => {
+    let q = supabase.from('matches').update(p).eq('id', id)
+    if (only) q = q.eq('status', only)
+    const { error } = await q
     if (error) throw new Error(error.message)
+  })
+  const move = (id: number, mv: QueueMove) => attempt(async () => {
+    for (const u of queueUpdates(data.matches, id, mv)) {
+      const { error } = await supabase.from('matches').update({ queue_order: u.queue_order }).eq('id', u.id).eq('status', 'scheduled')
+      if (error) throw new Error(error.message)
+    }
   })
   const reopen = (m: Match) => {
     const reason = window.prompt(t('reason'))
@@ -96,6 +108,13 @@ export default function MatchesTab({ data, reload }: TabProps) {
                   <td>
                     <div className="flex flex-wrap gap-1">
                       {m.status === 'scheduled' && <button className="btn btn-secondary btn-sm" onClick={() => update(m.id, { status: 'called' })}>{t('call')}</button>}
+                      {m.status === 'scheduled' && <>
+                        <button className="btn btn-ghost btn-sm" title={t('moveUp')} aria-label={t('moveUp')} disabled={busy} onClick={() => move(m.id, 'up')}>↑</button>
+                        <button className="btn btn-ghost btn-sm" title={t('moveDown')} aria-label={t('moveDown')} disabled={busy} onClick={() => move(m.id, 'down')}>↓</button>
+                        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => move(m.id, 'front')}>{t('playNext')}</button>
+                        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => move(m.id, 'back')}>{t('delay')}</button>
+                      </>}
+                      {m.status === 'called' && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => update(m.id, { status: 'scheduled' }, 'called')}>{t('uncall')}</button>}
                       {m.status === 'finished' && <button className="btn btn-primary btn-sm" onClick={() => attempt(() => orgConfirm(m.id))}>{t('confirm')}</button>}
                       {m.status === 'confirmed' && <button className="btn btn-secondary btn-sm" onClick={() => reopen(m)}>{t('reopen')}</button>}
                       {m.status !== 'scheduled' && <button className="btn btn-ghost btn-sm" onClick={() => setOv(ov?.id === m.id ? null : { id: m.id, a: String(m.score_a), b: String(m.score_b), reason: '' })}>{t('override')}</button>}

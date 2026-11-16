@@ -7,6 +7,7 @@ import { displayLabel, teamName } from '../../lib/display'
 import { useT } from '../../lib/i18n'
 import type { TabProps } from '../../lib/useTournamentData'
 import type { Court, Match } from '../../lib/types'
+import { queueUpdates, type QueueMove } from '../../lib/queue'
 import { useToast } from '../../components/Toast'
 import { Avatar } from '../../components/Avatar'
 import { StatusPill } from '../../components/StatusPill'
@@ -16,16 +17,31 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
   const toast = useToast()
   const nav = useNavigate()
   const [now, setNow] = useState(Date.now())
+  const [busy, setBusy] = useState(false)
   const [override, setOverride] = useState<{ courtId: string; a: string; b: string; reason: string } | null>(null)
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i) }, [])
 
   const ready = (m: Match) => m.status === 'scheduled' && !!m.team_a_id && !!m.team_b_id
   const unassigned = data.matches.filter(m => ready(m) && m.court_id === null)
 
-  const patch = async (id: number, p: { court_id?: string; status?: 'called' }) => {
-    const { error } = await supabase.from('matches').update(p).eq('id', id)
+  const patch = async (id: number, p: { court_id?: string | null; status?: 'called' | 'scheduled' }, only?: 'called' | 'scheduled') => {
+    let q = supabase.from('matches').update(p).eq('id', id)
+    if (only) q = q.eq('status', only)
+    const { error } = await q
     if (error) toast.error(error.message); else reload()
   }
+
+  const move = async (id: number, mv: QueueMove) => {
+    setBusy(true)
+    try {
+      for (const u of queueUpdates(data.matches, id, mv)) {
+        const { error } = await supabase.from('matches').update({ queue_order: u.queue_order }).eq('id', u.id).eq('status', 'scheduled')
+        if (error) throw new Error(error.message)
+      }
+    } catch (e) { toast.error((e as Error).message) }
+    await reload(); setBusy(false)
+  }
+  const act = async (fn: () => Promise<unknown> | void) => { setBusy(true); try { await fn() } finally { setBusy(false) } }
 
   const callNext = (c: Court, busy: boolean, next?: Match) => {
     if (busy) return
@@ -54,7 +70,8 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
         const onCourt = data.matches.filter(m => m.court_id === c.id)
         const live = onCourt.find(m => m.status === 'live')
         const cur = live ?? onCourt.find(m => m.status === 'called')
-        const next = onCourt.find(ready)
+        const queue = onCourt.filter(m => m.status === 'scheduled')
+        const next = queue.find(ready)
         const lastFinish = Math.max(0, ...onCourt.filter(m => m.finished_at).map(m => new Date(m.finished_at!).getTime()))
         const idle = !cur && (lastFinish === 0 || now - lastFinish > 120000)
         const idleMin = lastFinish ? Math.floor((now - lastFinish) / 60000) : 0
@@ -86,9 +103,26 @@ export default function CourtsBoard({ tid, data, reload }: TabProps) {
                 </div>
               </div>
             ) : <div className="muted mb-3 text-sm">{t('noCurrent')}</div>}
+            {cur?.status === 'called' && (
+              <button className="btn btn-secondary btn-sm mb-3" disabled={busy} onClick={() => act(() => patch(cur.id, { status: 'scheduled' }, 'called'))}>{t('uncall')}</button>
+            )}
             <div className="mb-3 rounded-md bg-ink-50 p-3 text-sm">
-              <span className="label mr-2">{t('next')}</span>
-              {next ? `${displayLabel(next, data.stages)} · ${teamName(data.teams, next.team_a_id)} – ${teamName(data.teams, next.team_b_id)}` : '—'}
+              <div className="label mb-1">{t('courtQueue')}</div>
+              {queue.length === 0 ? '—' : (
+                <ul className="space-y-1">
+                  {queue.map(m => (
+                    <li key={m.id} className={`flex flex-wrap items-center gap-1 ${m.id === next?.id ? 'font-semibold' : ''}`}>
+                      <span className="chip">{displayLabel(m, data.stages)}</span>
+                      <span className="min-w-0 flex-1 truncate">{teamName(data.teams, m.team_a_id)} – {teamName(data.teams, m.team_b_id)}</span>
+                      <button className="btn btn-ghost btn-sm" disabled={busy} title={t('moveUp')} aria-label={t('moveUp')} onClick={() => move(m.id, 'up')}>↑</button>
+                      <button className="btn btn-ghost btn-sm" disabled={busy} title={t('moveDown')} aria-label={t('moveDown')} onClick={() => move(m.id, 'down')}>↓</button>
+                      <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => move(m.id, 'front')}>{t('playNext')}</button>
+                      <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => move(m.id, 'back')}>{t('delay')}</button>
+                      <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => act(() => patch(m.id, { court_id: null }, 'scheduled'))}>{t('unassign')}</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button className="btn btn-primary btn-sm" disabled={!!cur || (!next && !unassigned.length)}

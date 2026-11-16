@@ -24,7 +24,7 @@ export function ScoreCard({ match, teams, stages, size = 'sm', courtName, big = 
       <div className="flex items-center gap-3">
         <Avatar name={name} size={tv ? 'lg' : 'md'} />
         <div className={`min-w-0 flex-1 truncate ${tv ? 'text-4xl' : 'text-base'} ${done && match.winner === side ? 'font-bold' : 'font-semibold'} ${lose ? (tv ? 'text-brand-100/50' : 'text-ink-400') : ''}`}>{name}</div>
-        {serving && <span title={t('serving')} className={`shrink-0 rounded-full bg-gold ${tv ? 'h-7 w-7' : 'h-2.5 w-2.5 ring-1 ring-gold-600'}`} />}
+        {serving && <span title={`${t('serving')} ${match.server_number}`} className={`flex shrink-0 ${tv ? 'gap-2' : 'gap-1'}`}>{Array.from({ length: match.server_number ?? 1 }, (_, i) => <span key={i} className={`rounded-full bg-gold ${tv ? 'h-7 w-7' : 'h-2.5 w-2.5 ring-1 ring-gold-600'}`} />)}</span>}
         <div className={`font-score font-bold leading-none tnum ${tv ? 'text-[132px]' : big ? 'text-6xl' : 'text-4xl'} ${lose ? (tv ? 'text-brand-100/50' : 'text-ink-400') : ''}`}>{score}</div>
       </div>
     )

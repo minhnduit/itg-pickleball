@@ -22,7 +22,7 @@ const vi = {
   lastResults: 'Kết quả gần nhất',
   // courts board / matches
   tvView_courts: 'Sân đang đấu', tvView_standings: 'Bảng xếp hạng', tvView_brackets: 'Nhánh đấu', tvView_upnext: 'Trận tiếp theo', tvPaused: 'Tạm dừng',
-  idle: 'Sân trống', noCurrent: 'Chưa có trận', next: 'Tiếp theo', callNext: 'Gọi trận tiếp', assignMatch: 'Xếp trận...',
+  idle: 'Sân trống', noCurrent: 'Chưa có trận', next: 'Tiếp theo', callNext: 'Gọi trận tiếp', uncall: 'Hủy gọi', courtQueue: 'Hàng chờ', moveUp: 'Lên', moveDown: 'Xuống', playNext: 'Đánh trước', delay: 'Hoãn', unassign: 'Bỏ khỏi sân', assignMatch: 'Xếp trận...',
   takeOver: 'Chấm điểm thay', override: 'Sửa điểm', reason: 'Lý do', save: 'Lưu',
   allStages: 'Tất cả giai đoạn', allGroups: 'Tất cả bảng', allStatuses: 'Mọi trạng thái', allCourts: 'Tất cả sân', noCourt: 'Chưa có sân',
   confirmAllFinished: 'Xác nhận tất cả trận đã xong', match: 'Trận', court: 'Sân', status: 'Trạng thái', score: 'Điểm',
@@ -87,7 +87,7 @@ const en: Record<Key, string> = {
   searchPlaceholder: 'Search team / player', myMatches: 'My matches', nothingFound: 'Nothing found',
   lastResults: 'Last results',
   tvView_courts: 'Live courts', tvView_standings: 'Standings', tvView_brackets: 'Brackets', tvView_upnext: 'Up next', tvPaused: 'Paused',
-  idle: 'Idle', noCurrent: 'No match', next: 'Next', callNext: 'Call next', assignMatch: 'Assign match...',
+  idle: 'Idle', noCurrent: 'No match', next: 'Next', callNext: 'Call next', uncall: 'Cancel call', courtQueue: 'Queue', moveUp: 'Move up', moveDown: 'Move down', playNext: 'Play next', delay: 'Delay', unassign: 'Remove from court', assignMatch: 'Assign match...',
   takeOver: 'Take over scoring', override: 'Override score', reason: 'Reason', save: 'Save',
   allStages: 'All stages', allGroups: 'All groups', allStatuses: 'All statuses', allCourts: 'All courts', noCourt: 'No court',
   confirmAllFinished: 'Confirm all finished', match: 'Match', court: 'Court', status: 'Status', score: 'Score',
