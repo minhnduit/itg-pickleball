@@ -1,0 +1,13 @@
+node_modules
+dist
+.env.local
+.env.*.local
+.DS_Store
+# Supabase CLI local state (contains local demo keys)
+supabase/.branches
+supabase/.temp
+# Claude Code setup
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
